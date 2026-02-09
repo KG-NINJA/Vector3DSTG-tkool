@@ -71,3 +71,7 @@ This repo includes:
 
 - The exported game is designed to run offline.
 - If you modify `GAME_CONFIG` manually, keep types/ranges sane; invalid config may break gameplay.
+
+## License / ライセンス
+
+MIT License. See `LICENSE`.
