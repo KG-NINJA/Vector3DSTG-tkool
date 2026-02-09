@@ -1,0 +1,1775 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>STGbuilder - Vector Wireframe Builder</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg0: #050814;
+      --bg1: #03040a;
+      --panel: rgba(6, 14, 28, 0.86);
+      --panel2: rgba(10, 22, 42, 0.72);
+      --stroke: rgba(120, 210, 255, 0.35);
+      --stroke2: rgba(120, 210, 255, 0.55);
+      --txt: #d7f1ff;
+      --muted: rgba(215, 241, 255, 0.7);
+      --danger: #ff667a;
+      --ok: #4fe3b6;
+      --accent: #4db6ff;
+      --accent2: #00f0ff;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: radial-gradient(circle at 50% 35%, #00152f 0%, #03040a 70%, #01020a 100%);
+      color: var(--txt);
+      font-family: var(--sans);
+    }
+    * { box-sizing: border-box; }
+    .app {
+      height: 100%;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+    }
+    header {
+      grid-column: 1 / 3;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(120, 210, 255, 0.22);
+      background: linear-gradient(180deg, rgba(7, 16, 32, 0.85), rgba(3, 7, 14, 0.55));
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(8px);
+    }
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 190px;
+    }
+    .brand .name {
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 13px;
+    }
+    .brand .sub {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .btnbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    button, .btn {
+      appearance: none;
+      border: 1px solid rgba(120, 210, 255, 0.35);
+      background: rgba(10, 25, 52, 0.75);
+      color: var(--txt);
+      border-radius: 999px;
+      padding: 9px 14px;
+      cursor: pointer;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+    button:hover, .btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(160, 235, 255, 0.55);
+      box-shadow: 0 0 18px rgba(77, 182, 255, 0.14);
+      background: rgba(10, 34, 74, 0.78);
+    }
+    button:active, .btn:active { transform: translateY(0); }
+    button.primary {
+      background: linear-gradient(135deg, rgba(0, 160, 255, 0.85), rgba(0, 240, 255, 0.5));
+      border-color: rgba(0, 240, 255, 0.6);
+      color: #06101e;
+      font-weight: 700;
+    }
+    button.danger {
+      border-color: rgba(255, 102, 122, 0.55);
+      background: rgba(40, 10, 18, 0.55);
+    }
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+      transform: none;
+      box-shadow: none;
+    }
+    .sidebar {
+      padding: 12px 12px 18px;
+      border-right: 1px solid rgba(120, 210, 255, 0.18);
+      background: linear-gradient(180deg, rgba(6, 12, 24, 0.75), rgba(6, 8, 14, 0.62));
+      overflow: auto;
+    }
+    .main {
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: 1fr auto;
+    }
+    .previewWrap {
+      position: relative;
+      min-height: 0;
+    }
+    canvas#preview {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .hud {
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      pointer-events: none;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      color: rgba(215, 241, 255, 0.86);
+      text-shadow: 0 0 12px rgba(0, 240, 255, 0.12);
+      white-space: pre;
+    }
+    .statusbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-top: 1px solid rgba(120, 210, 255, 0.18);
+      background: rgba(3, 8, 16, 0.7);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(120, 210, 255, 0.22);
+      background: rgba(9, 20, 40, 0.6);
+    }
+    .pill b { color: var(--txt); font-weight: 700; }
+    details {
+      border: 1px solid rgba(120, 210, 255, 0.16);
+      background: rgba(5, 12, 22, 0.55);
+      border-radius: 12px;
+      padding: 10px 10px;
+      margin-bottom: 10px;
+    }
+    details[open] { border-color: rgba(120, 210, 255, 0.28); }
+    summary {
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 12px;
+      color: rgba(215, 241, 255, 0.9);
+    }
+    summary::-webkit-details-marker { display: none; }
+    .form {
+      margin-top: 10px;
+      display: grid;
+      gap: 10px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 120px;
+      gap: 10px;
+      align-items: center;
+    }
+    label {
+      font-size: 12px;
+      color: rgba(215, 241, 255, 0.88);
+      letter-spacing: 0.03em;
+    }
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 9px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(120, 210, 255, 0.18);
+      background: rgba(4, 10, 20, 0.75);
+      color: var(--txt);
+      font-family: var(--mono);
+      font-size: 12px;
+      outline: none;
+    }
+    input[type="color"] {
+      width: 100%;
+      height: 34px;
+      padding: 0;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+    input[type="range"] { width: 100%; }
+    .hint {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: rgba(215, 241, 255, 0.62);
+      line-height: 1.35;
+    }
+    .err {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--danger);
+      white-space: pre-wrap;
+    }
+    .ok {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ok);
+    }
+    .modalBackdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 200;
+    }
+    .modal {
+      width: min(760px, 100%);
+      border-radius: 14px;
+      background: rgba(6, 14, 28, 0.92);
+      border: 1px solid rgba(120, 210, 255, 0.28);
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+      padding: 14px 14px 12px;
+    }
+    .modal header {
+      position: static;
+      backdrop-filter: none;
+      border-bottom: 1px solid rgba(120, 210, 255, 0.18);
+      background: transparent;
+      padding: 0 0 10px;
+      margin-bottom: 10px;
+    }
+    .modal pre {
+      margin: 0;
+      padding: 10px 10px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(120, 210, 255, 0.16);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: rgba(215, 241, 255, 0.84);
+      overflow: auto;
+      max-height: 60vh;
+      line-height: 1.4;
+    }
+    .modalActions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 10px;
+    }
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      .sidebar { border-right: none; border-bottom: 1px solid rgba(120, 210, 255, 0.18); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="name">STGbuilder</div>
+        <div class="sub">Vector wireframe city shooter builder (single file)</div>
+      </div>
+      <div class="btnbar">
+        <button id="btnNew" class="danger">New</button>
+        <button id="btnSave" class="">Save Config</button>
+        <label class="btn" for="fileLoad">Load Config</label>
+        <input id="fileLoad" type="file" accept="application/json" style="display:none" />
+        <button id="btnExport" class="primary">Export Game</button>
+        <button id="btnHelp">Help</button>
+      </div>
+      <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
+        <div class="pill"><span>valid</span><b id="validLabel">yes</b></div>
+        <div class="pill"><span>regen</span><b id="regenLabel">auto</b></div>
+      </div>
+    </header>
+
+    <div class="sidebar" id="sidebar">
+      <div class="hint">
+        Edit knobs, watch preview, export a single <code>index.html</code>.
+        Seed makes generation reproducible.
+      </div>
+      <div id="errors" class="err" style="margin:10px 0 0;"></div>
+      <div id="ok" class="ok" style="margin:10px 0 0;"></div>
+
+      <details open>
+        <summary>Meta</summary>
+        <div class="form">
+          <div class="row">
+            <label for="title">Title</label>
+            <input id="title" type="text" value="City Run" />
+          </div>
+          <div class="row">
+            <label for="author">Author</label>
+            <input id="author" type="text" value="" />
+          </div>
+          <div class="row">
+            <label for="preset">Preset</label>
+            <select id="preset"></select>
+          </div>
+          <div class="row">
+            <label for="seed">Seed</label>
+            <input id="seed" type="number" step="1" value="1337" />
+          </div>
+        </div>
+      </details>
+
+      <details open>
+        <summary>Display</summary>
+        <div class="form">
+          <div class="row">
+            <label>Resolution Scale</label>
+            <input id="resolutionScale" type="range" min="0.75" max="1.5" step="0.01" value="1.0" />
+          </div>
+          <div class="row">
+            <label>FOV</label>
+            <input id="fov" type="range" min="0.8" max="1.8" step="0.01" value="1.2" />
+          </div>
+          <div class="row">
+            <label>Z Far</label>
+            <input id="zFar" type="range" min="1500" max="7000" step="10" value="4200" />
+          </div>
+          <div class="row">
+            <label>Line Width</label>
+            <input id="lineWidth" type="range" min="1" max="4.5" step="0.1" value="2.0" />
+          </div>
+          <div class="row">
+            <label>Glow Strength</label>
+            <input id="glow" type="range" min="0" max="1" step="0.01" value="0.62" />
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary>Colors</summary>
+        <div class="form">
+          <div class="row">
+            <label>Line</label>
+            <input id="colorLine" type="color" value="#00d6ff" />
+          </div>
+          <div class="row">
+            <label>Glow</label>
+            <input id="colorGlow" type="color" value="#00fff0" />
+          </div>
+          <div class="row">
+            <label>BG Top</label>
+            <input id="bgTop" type="color" value="#001634" />
+          </div>
+          <div class="row">
+            <label>BG Bottom</label>
+            <input id="bgBottom" type="color" value="#01020a" />
+          </div>
+        </div>
+      </details>
+
+      <details open>
+        <summary>Stage (City)</summary>
+        <div class="form">
+          <div class="row">
+            <label>Stage Length</label>
+            <input id="lengthZ" type="range" min="1600" max="9000" step="50" value="4200" />
+          </div>
+          <div class="row">
+            <label>Forward Speed</label>
+            <input id="forwardSpeed" type="range" min="140" max="520" step="5" value="300" />
+          </div>
+          <div class="row">
+            <label>Street Width</label>
+            <input id="streetWidth" type="range" min="26" max="90" step="1" value="52" />
+          </div>
+          <div class="row">
+            <label>Building Density</label>
+            <input id="buildingDensity" type="range" min="0" max="1" step="0.01" value="0.68" />
+          </div>
+          <div class="row">
+            <label>Building Height</label>
+            <input id="buildingHeight" type="range" min="20" max="220" step="2" value="120" />
+          </div>
+          <div class="row">
+            <label>Gate Interval</label>
+            <input id="gateInterval" type="range" min="120" max="520" step="10" value="240" />
+          </div>
+          <div class="row">
+            <label>Gate Size</label>
+            <input id="gateSize" type="range" min="18" max="70" step="1" value="42" />
+          </div>
+          <div class="row">
+            <label>Fog Strength</label>
+            <input id="fogStrength" type="range" min="0" max="1" step="0.01" value="0.55" />
+          </div>
+        </div>
+      </details>
+
+      <details open>
+        <summary>Player</summary>
+        <div class="form">
+          <div class="row">
+            <label>Max HP</label>
+            <input id="maxHp" type="range" min="40" max="260" step="5" value="120" />
+          </div>
+          <div class="row">
+            <label>Shield</label>
+            <input id="shield" type="range" min="0" max="160" step="5" value="40" />
+          </div>
+          <div class="row">
+            <label>Move Speed X</label>
+            <input id="speedX" type="range" min="40" max="240" step="5" value="130" />
+          </div>
+          <div class="row">
+            <label>Move Speed Y</label>
+            <input id="speedY" type="range" min="30" max="220" step="5" value="110" />
+          </div>
+        </div>
+      </details>
+
+      <details open>
+        <summary>Weapons</summary>
+        <div class="form">
+          <div class="row">
+            <label>Shot Rate</label>
+            <input id="shotRate" type="range" min="6" max="18" step="0.5" value="11" />
+          </div>
+          <div class="row">
+            <label>Shot Speed</label>
+            <input id="shotSpeed" type="range" min="650" max="1900" step="25" value="1150" />
+          </div>
+          <div class="row">
+            <label>Missile Cooldown</label>
+            <input id="missileCooldown" type="range" min="0.8" max="6.0" step="0.1" value="2.4" />
+          </div>
+          <div class="row">
+            <label>Missile Max Active</label>
+            <input id="missileMaxActive" type="range" min="0" max="6" step="1" value="3" />
+          </div>
+        </div>
+      </details>
+
+      <details open>
+        <summary>Enemies</summary>
+        <div class="form">
+          <div class="row">
+            <label>Air Density</label>
+            <input id="airDensity" type="range" min="0" max="1" step="0.01" value="0.55" />
+          </div>
+          <div class="row">
+            <label>Ground Density</label>
+            <input id="groundDensity" type="range" min="0" max="1" step="0.01" value="0.35" />
+          </div>
+          <div class="row">
+            <label>Enemy HP</label>
+            <input id="enemyHp" type="range" min="15" max="150" step="5" value="50" />
+          </div>
+          <div class="row">
+            <label>Enemy Speed</label>
+            <input id="enemySpeed" type="range" min="60" max="360" step="5" value="170" />
+          </div>
+          <div class="row">
+            <label>Shot Interval</label>
+            <input id="enemyShotInterval" type="range" min="0.45" max="3.5" step="0.05" value="1.35" />
+          </div>
+          <div class="row">
+            <label>Shot Speed</label>
+            <input id="enemyShotSpeed" type="range" min="350" max="1400" step="25" value="760" />
+          </div>
+          <div class="row">
+            <label>Shot Accuracy</label>
+            <input id="enemyAccuracy" type="range" min="0" max="1" step="0.01" value="0.62" />
+          </div>
+          <div class="row">
+            <label>Enemy Damage</label>
+            <input id="enemyDamage" type="range" min="6" max="40" step="1" value="14" />
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="main">
+      <div class="previewWrap">
+        <canvas id="preview"></canvas>
+        <div class="hud" id="hud"></div>
+      </div>
+      <div class="statusbar">
+        <div class="pill"><span>FPS</span><b id="fps">--</b></div>
+        <div class="pill"><span>Seed</span><b id="seedEcho">--</b></div>
+        <div class="pill"><span>Stage</span><b id="stageEcho">--</b></div>
+        <div class="pill"><span>Hint</span><b>WASD/Arrows, Space, F</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modalBackdrop" id="modal">
+    <div class="modal">
+      <header>
+        <div class="brand">
+          <div class="name">Help</div>
+          <div class="sub">Acceptance checklist (v0)</div>
+        </div>
+      </header>
+      <pre id="helpText"></pre>
+      <div class="modalActions">
+        <button id="btnCloseHelp">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    "use strict";
+
+    // ----------------------------
+    // Config + Presets
+    // ----------------------------
+    function defaultConfig() {
+      return {
+        version: "stgbuilder-cityshooter-v0",
+        meta: { title: "City Run", author: "" },
+        seed: 1337,
+        display: {
+          resolutionScale: 1.0,
+          fov: 1.2,
+          zNear: 1.0,
+          zFar: 4200,
+          lineWidth: 2.0,
+          glowStrength: 0.62,
+        },
+        colors: {
+          line: "#00d6ff",
+          glow: "#00fff0",
+          bgTop: "#001634",
+          bgBottom: "#01020a",
+        },
+        player: {
+          maxHp: 120,
+          shield: 40,
+          speedX: 130,
+          speedY: 110,
+        },
+        weapons: {
+          shotRate: 11,
+          shotSpeed: 1150,
+          missileCooldown: 2.4,
+          missileMaxActive: 3,
+        },
+        stage: {
+          lengthZ: 4200,
+          forwardSpeed: 300,
+          city: {
+            streetWidth: 52,
+            buildingDensity: 0.68,
+            buildingHeight: 120,
+            gateInterval: 240,
+            gateSize: 42,
+            fogStrength: 0.55,
+          },
+        },
+        enemies: {
+          airDensity: 0.55,
+          groundDensity: 0.35,
+          enemyHp: 50,
+          enemySpeed: 170,
+          shotInterval: 1.35,
+          shotSpeed: 760,
+          shotAccuracy: 0.62,
+          enemyDamage: 14,
+        },
+      };
+    }
+
+    const PRESETS = {
+      "Arcade (Default)": (cfg) => cfg,
+      "Hard Neon": (cfg) => {
+        cfg.colors.line = "#7ffbff";
+        cfg.colors.glow = "#00fff0";
+        cfg.display.lineWidth = 2.6;
+        cfg.display.glowStrength = 0.78;
+        cfg.stage.city.fogStrength = 0.62;
+        cfg.stage.city.buildingDensity = 0.78;
+        cfg.stage.city.buildingHeight = 150;
+        cfg.enemies.airDensity = 0.72;
+        cfg.enemies.groundDensity = 0.46;
+        cfg.enemies.shotInterval = 1.05;
+        cfg.player.maxHp = 100;
+        cfg.player.shield = 25;
+        return cfg;
+      },
+      "Calm Cruise": (cfg) => {
+        cfg.colors.line = "#65c2ff";
+        cfg.colors.glow = "#a6fffd";
+        cfg.display.lineWidth = 1.7;
+        cfg.display.glowStrength = 0.45;
+        cfg.stage.forwardSpeed = 240;
+        cfg.stage.city.buildingDensity = 0.52;
+        cfg.enemies.airDensity = 0.32;
+        cfg.enemies.groundDensity = 0.2;
+        cfg.enemies.shotInterval = 1.8;
+        cfg.player.maxHp = 140;
+        cfg.player.shield = 70;
+        return cfg;
+      },
+    };
+
+    function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+    function validateConfig(cfg) {
+      const errors = [];
+      if (!cfg || typeof cfg !== "object") errors.push("Config is not an object.");
+      if (!cfg.meta || typeof cfg.meta.title !== "string") errors.push("meta.title must be a string.");
+      if (!Number.isFinite(cfg.seed)) errors.push("seed must be a number.");
+      const d = cfg.display || {};
+      if (!Number.isFinite(d.fov) || d.fov < 0.6 || d.fov > 2.2) errors.push("display.fov out of range.");
+      if (!Number.isFinite(d.zFar) || d.zFar < 800 || d.zFar > 12000) errors.push("display.zFar out of range.");
+      if (!Number.isFinite(d.resolutionScale) || d.resolutionScale < 0.5 || d.resolutionScale > 2.0) errors.push("display.resolutionScale out of range.");
+      const st = cfg.stage || {};
+      if (!Number.isFinite(st.lengthZ) || st.lengthZ < 600) errors.push("stage.lengthZ too small.");
+      if (!Number.isFinite(st.forwardSpeed) || st.forwardSpeed < 40) errors.push("stage.forwardSpeed too small.");
+      const c = (st.city || {});
+      if (!Number.isFinite(c.streetWidth) || c.streetWidth < 18) errors.push("stage.city.streetWidth too small.");
+      if (!Number.isFinite(c.buildingDensity) || c.buildingDensity < 0 || c.buildingDensity > 1) errors.push("stage.city.buildingDensity out of range.");
+      if (!Number.isFinite(c.fogStrength) || c.fogStrength < 0 || c.fogStrength > 1) errors.push("stage.city.fogStrength out of range.");
+      const e = cfg.enemies || {};
+      if (!Number.isFinite(e.shotAccuracy) || e.shotAccuracy < 0 || e.shotAccuracy > 1) errors.push("enemies.shotAccuracy out of range.");
+      return errors;
+    }
+
+    // ----------------------------
+    // Deterministic PRNG (mulberry32)
+    // ----------------------------
+    function mulberry32(seed) {
+      let t = seed >>> 0;
+      return function() {
+        t += 0x6D2B79F5;
+        let x = Math.imul(t ^ (t >>> 15), 1 | t);
+        x ^= x + Math.imul(x ^ (x >>> 7), 61 | x);
+        return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    function hashSeed(n) {
+      // Allows negative and large input to map to stable uint32 seed.
+      const x = Number.isFinite(n) ? n : 0;
+      let h = Math.imul((x | 0) ^ 0x9e3779b9, 0x85ebca6b);
+      h ^= h >>> 13;
+      h = Math.imul(h, 0xc2b2ae35);
+      h ^= h >>> 16;
+      return h >>> 0;
+    }
+
+    // ----------------------------
+    // Geometry helpers (Float32 edges: ax,ay,az,bx,by,bz ...)
+    // ----------------------------
+    function pushEdge(buf, ax, ay, az, bx, by, bz) {
+      buf.push(ax, ay, az, bx, by, bz);
+    }
+    function createBoxEdges(cx, cy, cz, w, h, d, out) {
+      const hx = w * 0.5, hy = h * 0.5, hz = d * 0.5;
+      const x0 = cx - hx, x1 = cx + hx;
+      const y0 = cy - hy, y1 = cy + hy;
+      const z0 = cz - hz, z1 = cz + hz;
+      // Bottom rectangle
+      pushEdge(out, x0, y0, z0, x1, y0, z0);
+      pushEdge(out, x1, y0, z0, x1, y0, z1);
+      pushEdge(out, x1, y0, z1, x0, y0, z1);
+      pushEdge(out, x0, y0, z1, x0, y0, z0);
+      // Top rectangle
+      pushEdge(out, x0, y1, z0, x1, y1, z0);
+      pushEdge(out, x1, y1, z0, x1, y1, z1);
+      pushEdge(out, x1, y1, z1, x0, y1, z1);
+      pushEdge(out, x0, y1, z1, x0, y1, z0);
+      // Vertical edges
+      pushEdge(out, x0, y0, z0, x0, y1, z0);
+      pushEdge(out, x1, y0, z0, x1, y1, z0);
+      pushEdge(out, x1, y0, z1, x1, y1, z1);
+      pushEdge(out, x0, y0, z1, x0, y1, z1);
+    }
+    function createGateEdges(cy, cz, w, h, thickness, out) {
+      // A rectangular frame: outer box minus inner box (represented as edges)
+      const outerW = w, outerH = h;
+      const innerW = Math.max(2, w - thickness * 2);
+      const innerH = Math.max(2, h - thickness * 2);
+      const y0 = cy - outerH * 0.5;
+      const y1 = cy + outerH * 0.5;
+      const x0 = -outerW * 0.5;
+      const x1 = outerW * 0.5;
+      const iy0 = cy - innerH * 0.5;
+      const iy1 = cy + innerH * 0.5;
+      const ix0 = -innerW * 0.5;
+      const ix1 = innerW * 0.5;
+      // Outer rectangle
+      pushEdge(out, x0, y0, cz, x1, y0, cz);
+      pushEdge(out, x1, y0, cz, x1, y1, cz);
+      pushEdge(out, x1, y1, cz, x0, y1, cz);
+      pushEdge(out, x0, y1, cz, x0, y0, cz);
+      // Inner rectangle
+      pushEdge(out, ix0, iy0, cz, ix1, iy0, cz);
+      pushEdge(out, ix1, iy0, cz, ix1, iy1, cz);
+      pushEdge(out, ix1, iy1, cz, ix0, iy1, cz);
+      pushEdge(out, ix0, iy1, cz, ix0, iy0, cz);
+    }
+    function createGroundGrid(width, zStart, zEnd, step, out) {
+      const half = width * 0.5;
+      for (let x = -half; x <= half + 1e-6; x += step) {
+        pushEdge(out, x, 0, zStart, x, 0, zEnd);
+      }
+      for (let z = zStart; z >= zEnd - 1e-6; z -= step) {
+        pushEdge(out, -half, 0, z, half, 0, z);
+      }
+    }
+    function toFloat32(edgeBuf) {
+      return new Float32Array(edgeBuf);
+    }
+
+    // ----------------------------
+    // Mini engine (preview + export share the same logic via code duplication in export)
+    // ----------------------------
+    function createGameRuntime(canvas, hudEl, cfg) {
+      const ctx = canvas.getContext("2d", { alpha: false });
+      const keys = new Set();
+      let running = true;
+
+      const state = {
+        time: 0,
+        dt: 1 / 60,
+        phase: "play",
+        player: {
+          x: 0,
+          y: 14,
+          z: 0,
+          vx: 0,
+          vy: 0,
+          hp: cfg.player.maxHp,
+          shield: cfg.player.shield,
+          shotCooldown: 0,
+          missileCooldown: 0,
+        },
+        cam: { x: 0, y: 0, z: 60, shake: 0 },
+        shots: [],
+        missiles: [],
+        enemies: [],
+        enemyShots: [],
+        explosions: [],
+        nearestEnemy: { id: "NA", dist: 0 },
+        score: 0,
+        cleared: false,
+        gameOver: false,
+      };
+
+      const seedU32 = hashSeed(cfg.seed);
+      const rand = mulberry32(seedU32);
+
+      const gen = generateStageGeometry(cfg, rand);
+      const spawns = generateEnemySpawns(cfg, rand).sort((a, b) => b.z - a.z);
+      let spawnIdx = 0;
+
+      function onKey(ev, down) {
+        if (down) {
+          keys.add(ev.code);
+          if (ev.code === "Space") ev.preventDefault();
+          if (ev.code === "KeyF") ev.preventDefault();
+        } else {
+          keys.delete(ev.code);
+        }
+      }
+      const keydownHandler = (ev) => onKey(ev, true);
+      const keyupHandler = (ev) => onKey(ev, false);
+      window.addEventListener("keydown", keydownHandler);
+      window.addEventListener("keyup", keyupHandler);
+
+      let lastT = performance.now();
+      let fpsAcc = 0, fpsN = 0, fps = 0;
+      let didResize = false;
+
+      function resizeIfNeeded() {
+        const dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+        const scale = cfg.display.resolutionScale || 1;
+        const w = Math.max(320, Math.floor(canvas.clientWidth * dpr * scale));
+        const h = Math.max(240, Math.floor(canvas.clientHeight * dpr * scale));
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
+          didResize = true;
+        }
+        return { w, h, dpr };
+      }
+
+      function projectPoint(px, py, pz, w, h) {
+        const dx = px - state.cam.x;
+        const dy = py - state.cam.y;
+        const dz = pz - state.cam.z;
+        const z = -dz;
+        if (z < cfg.display.zNear || z > cfg.display.zFar) return null;
+        const s = cfg.display.fov / z;
+        return { x: w * 0.5 + dx * s * w * 0.5, y: h * 0.5 - dy * s * w * 0.5, z };
+      }
+
+      function drawEdges(edges, color, glowColor, width, glowStrength, w, h, tx = 0, ty = 0, tz = 0, yaw = 0, alphaMul = 1) {
+        if (!edges || edges.length < 6) return;
+        const cos = yaw ? Math.cos(yaw) : 1;
+        const sin = yaw ? Math.sin(yaw) : 0;
+
+        // Two-pass glow: thick faint line then thin bright line.
+        const baseAlpha = clamp(alphaMul, 0, 1);
+        const glowA = 0.22 + glowStrength * 0.38;
+        const coreA = 0.42 + glowStrength * 0.58;
+
+        function stroke(passWidth, shadowBlur, strokeStyle, shadowColor, alpha) {
+          ctx.save();
+          ctx.lineWidth = passWidth;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.shadowBlur = shadowBlur;
+          ctx.shadowColor = shadowColor;
+          ctx.strokeStyle = strokeStyle;
+          ctx.globalAlpha = alpha * baseAlpha;
+          ctx.beginPath();
+          for (let i = 0; i < edges.length; i += 6) {
+            let ax = edges[i] + tx;
+            let ay = edges[i + 1] + ty;
+            let az = edges[i + 2] + tz;
+            let bx = edges[i + 3] + tx;
+            let by = edges[i + 4] + ty;
+            let bz = edges[i + 5] + tz;
+            if (yaw) {
+              const aox = ax - tx, aoz = az - tz;
+              const box = bx - tx, boz = bz - tz;
+              ax = tx + aox * cos - aoz * sin;
+              az = tz + aox * sin + aoz * cos;
+              bx = tx + box * cos - boz * sin;
+              bz = tz + box * sin + boz * cos;
+            }
+            const p0 = projectPoint(ax, ay, az, w, h);
+            const p1 = projectPoint(bx, by, bz, w, h);
+            if (!p0 || !p1) continue;
+            ctx.moveTo(p0.x, p0.y);
+            ctx.lineTo(p1.x, p1.y);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        stroke(width * (1.0 + glowStrength * 1.4), 18 + glowStrength * 24, color, glowColor, glowA);
+        stroke(width, 8 + glowStrength * 12, color, glowColor, coreA);
+      }
+
+      function updateNearestEnemy() {
+        let best = null;
+        let bestD = Infinity;
+        for (const e of state.enemies) {
+          if (!e.alive) continue;
+          const dz = Math.abs(state.player.z - e.z);
+          if (dz < bestD) { bestD = dz; best = e; }
+        }
+        state.nearestEnemy.id = best ? best.kind : "NA";
+        state.nearestEnemy.dist = best ? Math.floor(bestD) : 0;
+      }
+
+      function spawnPlayerShot() {
+        state.shots.push({
+          x: state.player.x,
+          y: state.player.y,
+          z: state.player.z - 10,
+          vx: 0,
+          vy: 0,
+          vz: -cfg.weapons.shotSpeed,
+          r: 6,
+          life: 2.0,
+        });
+      }
+      function spawnPlayerMissile() {
+        if (cfg.weapons.missileMaxActive <= 0) return;
+        if (state.missiles.length >= cfg.weapons.missileMaxActive) return;
+        state.missiles.push({
+          x: state.player.x,
+          y: state.player.y - 2,
+          z: state.player.z - 8,
+          vz: -Math.max(520, cfg.weapons.shotSpeed * 0.85),
+          speed: Math.max(560, cfg.weapons.shotSpeed * 0.9),
+          r: 10,
+          life: 4.0,
+          turn: 1.0,
+        });
+      }
+      function spawnEnemyShot(enemy) {
+        const dz = enemy.z - state.player.z;
+        if (dz > -40) return; // don't shoot when behind player
+        const aim = cfg.enemies.shotAccuracy;
+        const jitter = (1 - aim) * 60;
+        const tx = state.player.x + (rand() * 2 - 1) * jitter;
+        const ty = state.player.y + (rand() * 2 - 1) * jitter * 0.35;
+        const dx = tx - enemy.x;
+        const dy = ty - enemy.y;
+        const len = Math.hypot(dx, dy, 1);
+        const vx = (dx / len) * cfg.enemies.shotSpeed;
+        const vy = (dy / len) * cfg.enemies.shotSpeed;
+        state.enemyShots.push({
+          x: enemy.x,
+          y: enemy.y,
+          z: enemy.z + 10,
+          vx, vy,
+          vz: cfg.enemies.shotSpeed * 0.9,
+          r: 8,
+          life: 3.2,
+          dmg: cfg.enemies.enemyDamage,
+        });
+      }
+      function boom(x, y, z, strength) {
+        state.explosions.push({ x, y, z, t: 0, strength });
+      }
+
+      function step(dt) {
+        state.dt = dt;
+        state.time += dt;
+
+        if (!running) return;
+
+        // Input
+        const mx = (keys.has("ArrowRight") || keys.has("KeyD") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("KeyA") ? 1 : 0);
+        const my = (keys.has("ArrowUp") || keys.has("KeyW") ? 1 : 0) - (keys.has("ArrowDown") || keys.has("KeyS") ? 1 : 0);
+        state.player.x += mx * cfg.player.speedX * dt;
+        state.player.y += my * cfg.player.speedY * dt;
+        state.player.x = clamp(state.player.x, -cfg.stage.city.streetWidth * 0.5 + 6, cfg.stage.city.streetWidth * 0.5 - 6);
+        state.player.y = clamp(state.player.y, 4, 110);
+
+        // Forward movement
+        if (!state.gameOver && !state.cleared) {
+          state.player.z -= cfg.stage.forwardSpeed * dt;
+        }
+
+        // Camera follow
+        const camLag = 46;
+        state.cam.x += (state.player.x - state.cam.x) * Math.min(1, dt * 7);
+        state.cam.y += ((state.player.y + 12) - state.cam.y) * Math.min(1, dt * 4.8);
+        state.cam.z = state.player.z + camLag;
+
+        // Shooting
+        state.player.shotCooldown = Math.max(0, state.player.shotCooldown - dt);
+        state.player.missileCooldown = Math.max(0, state.player.missileCooldown - dt);
+        if (!state.gameOver && !state.cleared) {
+          if (keys.has("Space") && state.player.shotCooldown <= 0) {
+            spawnPlayerShot();
+            state.player.shotCooldown = 1 / cfg.weapons.shotRate;
+          }
+          if (keys.has("KeyF") && state.player.missileCooldown <= 0) {
+            spawnPlayerMissile();
+            state.player.missileCooldown = cfg.weapons.missileCooldown;
+          }
+        }
+
+        // Spawn enemies when approaching spawn z
+        const spawnWindow = 900;
+        while (spawnIdx < spawns.length && state.player.z < spawns[spawnIdx].z + spawnWindow) {
+          const s = spawns[spawnIdx++];
+          state.enemies.push({
+            kind: s.kind,
+            x: s.x,
+            y: s.y,
+            z: s.z,
+            baseX: s.x,
+            baseY: s.y,
+            baseZ: s.z,
+            hp: cfg.enemies.enemyHp,
+            r: s.kind === "ground" ? 14 : 12,
+            alive: true,
+            t: 0,
+            phase: s.phase,
+            freq: s.freq,
+            ampX: s.ampX,
+            ampY: s.ampY,
+            shotT: 0.2 + rand() * 0.4,
+          });
+        }
+
+        // Update enemies + shooting
+        for (const e of state.enemies) {
+          if (!e.alive) continue;
+          e.t += dt;
+          const wave = Math.sin((state.time + e.phase) * e.freq);
+          const sway = Math.cos((state.time + e.phase) * e.freq * 0.7);
+          e.x = e.baseX + wave * e.ampX;
+          e.y = e.baseY + sway * e.ampY;
+          e.z += cfg.enemies.enemySpeed * 0.15 * dt; // slight drift toward player
+
+          e.shotT -= dt;
+          const dz = (e.z - state.player.z);
+          if (e.shotT <= 0 && dz < -120 && dz > -1800 && !state.gameOver && !state.cleared) {
+            spawnEnemyShot(e);
+            e.shotT = cfg.enemies.shotInterval * (0.85 + rand() * 0.35);
+          }
+        }
+
+        // Update shots
+        for (let i = state.shots.length - 1; i >= 0; i--) {
+          const s = state.shots[i];
+          s.life -= dt;
+          s.z += s.vz * dt;
+          if (s.life <= 0) state.shots.splice(i, 1);
+        }
+        for (let i = state.missiles.length - 1; i >= 0; i--) {
+          const m = state.missiles[i];
+          m.life -= dt;
+          // Home slightly toward nearest alive enemy
+          let target = null;
+          let best = Infinity;
+          for (const e of state.enemies) {
+            if (!e.alive) continue;
+            const d = Math.abs(m.z - e.z);
+            if (d < best) { best = d; target = e; }
+          }
+          if (target && best < 2400) {
+            const dx = target.x - m.x;
+            const dy = target.y - m.y;
+            const dz = target.z - m.z;
+            m.x += clamp(dx, -1, 1) * m.turn * 100 * dt;
+            m.y += clamp(dy, -1, 1) * m.turn * 80 * dt;
+            // keep moving forward
+          }
+          m.z += m.vz * dt;
+          if (m.life <= 0) state.missiles.splice(i, 1);
+        }
+        for (let i = state.enemyShots.length - 1; i >= 0; i--) {
+          const s = state.enemyShots[i];
+          s.life -= dt;
+          s.x += s.vx * dt;
+          s.y += s.vy * dt;
+          s.z += s.vz * dt;
+          if (s.life <= 0) state.enemyShots.splice(i, 1);
+        }
+
+        // Collisions: player shots vs enemies
+        for (const s of state.shots) {
+          for (const e of state.enemies) {
+            if (!e.alive) continue;
+            const dx = s.x - e.x, dy = s.y - e.y, dz = s.z - e.z;
+            const d = Math.hypot(dx, dy, dz);
+            if (d < s.r + e.r) {
+              e.hp -= 26;
+              s.life = 0;
+              boom(s.x, s.y, s.z, 0.7);
+              if (e.hp <= 0) {
+                e.alive = false;
+                state.score += 100;
+                boom(e.x, e.y, e.z, 1.2);
+              }
+              break;
+            }
+          }
+        }
+        // Missiles vs enemies
+        for (const m of state.missiles) {
+          for (const e of state.enemies) {
+            if (!e.alive) continue;
+            const dx = m.x - e.x, dy = m.y - e.y, dz = m.z - e.z;
+            const d = Math.hypot(dx, dy, dz);
+            if (d < m.r + e.r) {
+              e.hp -= 85;
+              m.life = 0;
+              boom(m.x, m.y, m.z, 1.6);
+              if (e.hp <= 0) {
+                e.alive = false;
+                state.score += 180;
+                boom(e.x, e.y, e.z, 1.6);
+              }
+              break;
+            }
+          }
+        }
+        // Enemy shots vs player
+        if (!state.gameOver && !state.cleared) {
+          for (const s of state.enemyShots) {
+            const dx = s.x - state.player.x, dy = s.y - state.player.y, dz = s.z - state.player.z;
+            const d = Math.hypot(dx, dy, dz);
+            if (d < 10 + s.r) {
+              s.life = 0;
+              boom(s.x, s.y, s.z, 0.9);
+              applyPlayerDamage(s.dmg);
+            }
+          }
+        }
+
+        // Explosions
+        for (let i = state.explosions.length - 1; i >= 0; i--) {
+          const ex = state.explosions[i];
+          ex.t += dt;
+          if (ex.t > 0.8) state.explosions.splice(i, 1);
+        }
+
+        // Stage clear
+        if (!state.cleared && state.player.z < -cfg.stage.lengthZ) {
+          state.cleared = true;
+        }
+
+        updateNearestEnemy();
+      }
+
+      function applyPlayerDamage(dmg) {
+        const p = state.player;
+        if (p.shield > 0) {
+          const s = Math.min(p.shield, dmg);
+          p.shield -= s;
+          dmg -= s;
+        }
+        if (dmg > 0) p.hp -= dmg;
+        if (p.hp <= 0) {
+          p.hp = 0;
+          state.gameOver = true;
+        }
+      }
+
+      function render() {
+        const { w, h } = resizeIfNeeded();
+        // Background gradient from config
+        const g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, cfg.colors.bgTop);
+        g.addColorStop(1, cfg.colors.bgBottom);
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+
+        const fog = cfg.stage.city.fogStrength;
+        const line = cfg.colors.line;
+        const glow = cfg.colors.glow;
+        const lw = cfg.display.lineWidth;
+        const glowS = cfg.display.glowStrength;
+
+        // City geometry
+        drawEdges(gen.grid, line, glow, lw * 0.85, glowS * 0.7, w, h, 0, 0, 0, 0, 0.75);
+        drawEdges(gen.buildings, line, glow, lw, glowS, w, h, 0, 0, 0, 0, 1);
+        drawEdges(gen.gates, line, glow, lw * 1.2, glowS, w, h, 0, 0, 0, 0, 1);
+
+        // Enemies
+        for (const e of state.enemies) {
+          if (!e.alive) continue;
+          const alpha = clamp(1 - (Math.abs(e.z - state.player.z) / cfg.display.zFar) * fog, 0.18, 1);
+          const yaw = e.kind === "air" ? Math.sin(state.time * 0.8 + e.phase) * 0.12 : 0;
+          const edges = (e.kind === "ground") ? gen.enemyShapes.ground : gen.enemyShapes.air;
+          drawEdges(edges, line, glow, lw * 1.1, glowS, w, h, e.x, e.y, e.z, yaw, alpha);
+        }
+
+        // Shots
+        for (const s of state.shots) {
+          const b = gen.shapes.bullet;
+          const a = clamp(1 - (Math.abs(s.z - state.player.z) / cfg.display.zFar) * fog, 0.3, 1);
+          drawEdges(b, line, glow, lw * 0.9, glowS * 0.7, w, h, s.x, s.y, s.z, 0, a);
+        }
+        for (const m of state.missiles) {
+          const a = clamp(1 - (Math.abs(m.z - state.player.z) / cfg.display.zFar) * fog, 0.3, 1);
+          drawEdges(gen.shapes.missile, glow, glow, lw * 1.2, glowS * 1.0, w, h, m.x, m.y, m.z, 0, a);
+        }
+        for (const s of state.enemyShots) {
+          const a = clamp(1 - (Math.abs(s.z - state.player.z) / cfg.display.zFar) * fog, 0.3, 1);
+          drawEdges(gen.shapes.enemyBullet, "#ff6a84", "#ff9ab0", lw * 1.0, glowS * 0.85, w, h, s.x, s.y, s.z, 0, a);
+        }
+
+        // Explosions (simple starburst)
+        for (const ex of state.explosions) {
+          const t = ex.t / 0.8;
+          const a = clamp(1 - t, 0, 1);
+          const size = ex.strength * (18 + t * 46);
+          const burst = gen.shapes.burst;
+          drawEdges(burst, glow, glow, lw * (1.0 + t), glowS, w, h, ex.x, ex.y, ex.z, state.time * 1.7, a);
+          // draw an additional ring
+          drawEdges(gen.shapes.ring, line, glow, lw * 0.9, glowS, w, h, ex.x, ex.y, ex.z, 0, a * 0.85);
+        }
+
+        // HUD
+        if (hudEl) {
+          const p = state.player;
+          const stagePct = clamp((-state.player.z) / cfg.stage.lengthZ, 0, 1);
+          hudEl.textContent =
+            `${cfg.meta.title.toUpperCase()}\n` +
+            `HP ${Math.floor(p.hp).toString().padStart(3, " ")}  SH ${Math.floor(p.shield).toString().padStart(3, " ")}\n` +
+            `E ${state.nearestEnemy.id}/${state.nearestEnemy.dist}  SCORE ${state.score}\n` +
+            `STAGE ${(stagePct * 100).toFixed(1)}%  ${state.cleared ? "CLEAR" : (state.gameOver ? "GAME OVER" : "RUN")}`;
+        }
+      }
+
+      function frame() {
+        if (!running) return;
+        const now = performance.now();
+        const dt = clamp((now - lastT) / 1000, 0.001, 0.033);
+        lastT = now;
+        step(dt);
+        render();
+        fpsAcc += 1 / dt;
+        fpsN++;
+        if (fpsN >= 18) {
+          fps = fpsAcc / fpsN;
+          fpsAcc = 0;
+          fpsN = 0;
+          document.getElementById("fps").textContent = fps.toFixed(0);
+        }
+        requestAnimationFrame(frame);
+      }
+
+      requestAnimationFrame(frame);
+
+      function dispose() {
+        running = false;
+        window.removeEventListener("keydown", keydownHandler);
+        window.removeEventListener("keyup", keyupHandler);
+      }
+
+      return { dispose, state, seedU32 };
+    }
+
+    function generateStageGeometry(cfg, rand) {
+      const city = cfg.stage.city;
+      const len = cfg.stage.lengthZ;
+      const step = 110;
+      const startZ = -140;
+      const endZ = -len - 200;
+      const street = city.streetWidth;
+      const density = city.buildingDensity;
+      const baseHeight = city.buildingHeight;
+      const buildings = [];
+      const gates = [];
+      const grid = [];
+
+      // Ground grid (a little wider than street)
+      createGroundGrid(street * 2.2, startZ, endZ, 10, grid);
+
+      // Buildings
+      const margin = 8;
+      for (let z = startZ; z >= endZ; z -= step) {
+        for (const side of [-1, 1]) {
+          if (rand() > density) continue;
+          const w = 10 + rand() * 24;
+          const d = 10 + rand() * 30;
+          const h = 18 + rand() * baseHeight;
+          const x = side * (street * 0.5 + margin + w * 0.5 + rand() * 6);
+          const y = h * 0.5;
+          // jitter z for less uniform look
+          const zJ = z + (rand() * 2 - 1) * 22;
+          createBoxEdges(x, y, zJ, w, h, d, buildings);
+          // add a "spire" occasionally
+          if (rand() < 0.18) {
+            createBoxEdges(x, y + h * 0.6, zJ, w * 0.45, h * 0.55, d * 0.45, buildings);
+          }
+        }
+      }
+
+      // Gates
+      const gateInterval = city.gateInterval;
+      const gateSize = city.gateSize;
+      for (let z = -220; z >= endZ; z -= gateInterval) {
+        createGateEdges(28 + rand() * 8, z, gateSize, gateSize * 0.85, 5, gates);
+      }
+
+      // Enemy + projectile shapes
+      const air = [];
+      // Simple arrow fighter
+      pushEdge(air, 0, 3, 0, 0, 3, -18);
+      pushEdge(air, 0, 3, -18, -8, 1, -8);
+      pushEdge(air, 0, 3, -18, 8, 1, -8);
+      pushEdge(air, -8, 1, -8, 0, 2, -6);
+      pushEdge(air, 8, 1, -8, 0, 2, -6);
+      pushEdge(air, -6, 2, -6, 6, 2, -6);
+      pushEdge(air, -6, 2, -6, -10, 2, 4);
+      pushEdge(air, 6, 2, -6, 10, 2, 4);
+      pushEdge(air, -10, 2, 4, 0, 3, 10);
+      pushEdge(air, 10, 2, 4, 0, 3, 10);
+
+      const ground = [];
+      // A small walker
+      createBoxEdges(0, 4, 0, 16, 8, 18, ground);
+      createBoxEdges(-7, 1.5, 0, 4, 6, 4, ground);
+      createBoxEdges(7, 1.5, 0, 4, 6, 4, ground);
+      createBoxEdges(0, 8, -6, 8, 6, 8, ground);
+
+      const bullet = [];
+      createBoxEdges(0, 0, 0, 2, 2, 12, bullet);
+      const enemyBullet = [];
+      createBoxEdges(0, 0, 0, 2.2, 2.2, 10, enemyBullet);
+      const missile = [];
+      createBoxEdges(0, 0, 0, 3, 3, 16, missile);
+      createBoxEdges(0, 0, -8, 10, 1.5, 3, missile);
+      const ring = [];
+      const r = 18;
+      for (let i = 0; i < 12; i++) {
+        const a0 = (i / 12) * Math.PI * 2;
+        const a1 = ((i + 1) / 12) * Math.PI * 2;
+        pushEdge(ring, Math.cos(a0) * r, Math.sin(a0) * r, 0, Math.cos(a1) * r, Math.sin(a1) * r, 0);
+      }
+      const burst = [];
+      for (let i = 0; i < 9; i++) {
+        const a = (i / 9) * Math.PI * 2;
+        pushEdge(burst, 0, 0, 0, Math.cos(a) * 24, Math.sin(a) * 24, 0);
+      }
+
+      return {
+        buildings: toFloat32(buildings),
+        gates: toFloat32(gates),
+        grid: toFloat32(grid),
+        enemyShapes: { air: toFloat32(air), ground: toFloat32(ground) },
+        shapes: { bullet: toFloat32(bullet), enemyBullet: toFloat32(enemyBullet), missile: toFloat32(missile), ring: toFloat32(ring), burst: toFloat32(burst) },
+      };
+    }
+
+    function generateEnemySpawns(cfg, rand) {
+      const street = cfg.stage.city.streetWidth;
+      const len = cfg.stage.lengthZ;
+      const start = -360;
+      const end = -len + 220;
+      const spawns = [];
+
+      const airN = Math.floor((len / 220) * cfg.enemies.airDensity * 1.15);
+      const groundN = Math.floor((len / 320) * cfg.enemies.groundDensity * 1.05);
+
+      for (let i = 0; i < airN; i++) {
+        const z = -(start + rand() * (len - 520));
+        const x = (rand() * 2 - 1) * (street * 0.45);
+        const y = 22 + rand() * 78;
+        spawns.push({
+          kind: "air",
+          x, y, z,
+          phase: rand() * 10,
+          freq: 0.6 + rand() * 0.8,
+          ampX: 8 + rand() * 22,
+          ampY: 4 + rand() * 12,
+        });
+      }
+      for (let i = 0; i < groundN; i++) {
+        const z = -(start + rand() * (len - 520));
+        const side = rand() < 0.5 ? -1 : 1;
+        const x = side * (street * 0.35 + 10 + rand() * 16);
+        const y = 5 + rand() * 10;
+        spawns.push({
+          kind: "ground",
+          x, y, z,
+          phase: rand() * 10,
+          freq: 0.4 + rand() * 0.7,
+          ampX: 5 + rand() * 10,
+          ampY: 2 + rand() * 6,
+        });
+      }
+      // clamp z range
+      for (const s of spawns) {
+        s.z = clamp(s.z, -(len + 200), -240);
+      }
+      return spawns;
+    }
+
+    // ----------------------------
+    // UI binding
+    // ----------------------------
+    const el = (id) => document.getElementById(id);
+    const errorsEl = el("errors");
+    const okEl = el("ok");
+    const validLabel = el("validLabel");
+    const seedEcho = el("seedEcho");
+    const stageEcho = el("stageEcho");
+    const hudEl = el("hud");
+    const canvas = el("preview");
+
+    const helpModal = el("modal");
+    const helpText = el("helpText");
+    helpText.textContent =
+`Must-pass checklist:
+1) Open STGbuilder/index.html in a modern browser (no install).
+2) Changing Seed changes buildings/gates/enemy placement.
+3) Same Seed + same settings stays the same after reload.
+4) Colors/Line/Glow update preview.
+5) Export Game downloads a single index.html.
+6) Exported index.html runs offline (no external files).
+7) Save Config + Load Config returns to identical settings.
+
+Controls (preview/exported game):
+- Move: WASD / Arrow keys
+- Shot: Space
+- Missile: F`;
+
+    function setModal(open) {
+      helpModal.style.display = open ? "flex" : "none";
+    }
+    el("btnHelp").addEventListener("click", () => setModal(true));
+    el("btnCloseHelp").addEventListener("click", () => setModal(false));
+    helpModal.addEventListener("click", (ev) => { if (ev.target === helpModal) setModal(false); });
+
+    // Populate presets
+    const presetSel = el("preset");
+    for (const name of Object.keys(PRESETS)) {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      presetSel.appendChild(opt);
+    }
+    presetSel.value = "Arcade (Default)";
+
+    let cfg = defaultConfig();
+    let runtime = null;
+    let regenTimer = null;
+
+    function showErrors(errs) {
+      if (!errs || errs.length === 0) {
+        errorsEl.textContent = "";
+        okEl.textContent = "OK";
+        validLabel.textContent = "yes";
+        validLabel.style.color = "var(--ok)";
+        return true;
+      }
+      errorsEl.textContent = errs.join("\n");
+      okEl.textContent = "";
+      validLabel.textContent = "no";
+      validLabel.style.color = "var(--danger)";
+      return false;
+    }
+
+    function readUIIntoConfig() {
+      cfg.meta.title = el("title").value || "City Run";
+      cfg.meta.author = el("author").value || "";
+      cfg.seed = Number(el("seed").value || 0);
+      cfg.display.resolutionScale = Number(el("resolutionScale").value);
+      cfg.display.fov = Number(el("fov").value);
+      cfg.display.zFar = Number(el("zFar").value);
+      cfg.display.lineWidth = Number(el("lineWidth").value);
+      cfg.display.glowStrength = Number(el("glow").value);
+      cfg.colors.line = el("colorLine").value;
+      cfg.colors.glow = el("colorGlow").value;
+      cfg.colors.bgTop = el("bgTop").value;
+      cfg.colors.bgBottom = el("bgBottom").value;
+      cfg.stage.lengthZ = Number(el("lengthZ").value);
+      cfg.stage.forwardSpeed = Number(el("forwardSpeed").value);
+      cfg.stage.city.streetWidth = Number(el("streetWidth").value);
+      cfg.stage.city.buildingDensity = Number(el("buildingDensity").value);
+      cfg.stage.city.buildingHeight = Number(el("buildingHeight").value);
+      cfg.stage.city.gateInterval = Number(el("gateInterval").value);
+      cfg.stage.city.gateSize = Number(el("gateSize").value);
+      cfg.stage.city.fogStrength = Number(el("fogStrength").value);
+      cfg.player.maxHp = Number(el("maxHp").value);
+      cfg.player.shield = Number(el("shield").value);
+      cfg.player.speedX = Number(el("speedX").value);
+      cfg.player.speedY = Number(el("speedY").value);
+      cfg.weapons.shotRate = Number(el("shotRate").value);
+      cfg.weapons.shotSpeed = Number(el("shotSpeed").value);
+      cfg.weapons.missileCooldown = Number(el("missileCooldown").value);
+      cfg.weapons.missileMaxActive = Number(el("missileMaxActive").value);
+      cfg.enemies.airDensity = Number(el("airDensity").value);
+      cfg.enemies.groundDensity = Number(el("groundDensity").value);
+      cfg.enemies.enemyHp = Number(el("enemyHp").value);
+      cfg.enemies.enemySpeed = Number(el("enemySpeed").value);
+      cfg.enemies.shotInterval = Number(el("enemyShotInterval").value);
+      cfg.enemies.shotSpeed = Number(el("enemyShotSpeed").value);
+      cfg.enemies.shotAccuracy = Number(el("enemyAccuracy").value);
+      cfg.enemies.enemyDamage = Number(el("enemyDamage").value);
+    }
+
+    function writeConfigIntoUI() {
+      el("title").value = cfg.meta.title;
+      el("author").value = cfg.meta.author;
+      el("seed").value = String(cfg.seed);
+      el("resolutionScale").value = String(cfg.display.resolutionScale);
+      el("fov").value = String(cfg.display.fov);
+      el("zFar").value = String(cfg.display.zFar);
+      el("lineWidth").value = String(cfg.display.lineWidth);
+      el("glow").value = String(cfg.display.glowStrength);
+      el("colorLine").value = cfg.colors.line;
+      el("colorGlow").value = cfg.colors.glow;
+      el("bgTop").value = cfg.colors.bgTop;
+      el("bgBottom").value = cfg.colors.bgBottom;
+      el("lengthZ").value = String(cfg.stage.lengthZ);
+      el("forwardSpeed").value = String(cfg.stage.forwardSpeed);
+      el("streetWidth").value = String(cfg.stage.city.streetWidth);
+      el("buildingDensity").value = String(cfg.stage.city.buildingDensity);
+      el("buildingHeight").value = String(cfg.stage.city.buildingHeight);
+      el("gateInterval").value = String(cfg.stage.city.gateInterval);
+      el("gateSize").value = String(cfg.stage.city.gateSize);
+      el("fogStrength").value = String(cfg.stage.city.fogStrength);
+      el("maxHp").value = String(cfg.player.maxHp);
+      el("shield").value = String(cfg.player.shield);
+      el("speedX").value = String(cfg.player.speedX);
+      el("speedY").value = String(cfg.player.speedY);
+      el("shotRate").value = String(cfg.weapons.shotRate);
+      el("shotSpeed").value = String(cfg.weapons.shotSpeed);
+      el("missileCooldown").value = String(cfg.weapons.missileCooldown);
+      el("missileMaxActive").value = String(cfg.weapons.missileMaxActive);
+      el("airDensity").value = String(cfg.enemies.airDensity);
+      el("groundDensity").value = String(cfg.enemies.groundDensity);
+      el("enemyHp").value = String(cfg.enemies.enemyHp);
+      el("enemySpeed").value = String(cfg.enemies.enemySpeed);
+      el("enemyShotInterval").value = String(cfg.enemies.shotInterval);
+      el("enemyShotSpeed").value = String(cfg.enemies.shotSpeed);
+      el("enemyAccuracy").value = String(cfg.enemies.shotAccuracy);
+      el("enemyDamage").value = String(cfg.enemies.enemyDamage);
+    }
+
+    function restartPreview() {
+      seedEcho.textContent = String(cfg.seed);
+      stageEcho.textContent = `len ${cfg.stage.lengthZ}  speed ${cfg.stage.forwardSpeed}`;
+      const errs = validateConfig(cfg);
+      const ok = showErrors(errs);
+      el("btnExport").disabled = !ok;
+      if (!ok) return;
+
+      if (runtime) runtime.dispose();
+      runtime = createGameRuntime(canvas, hudEl, cfg);
+    }
+
+    function scheduleRegen() {
+      if (regenTimer) clearTimeout(regenTimer);
+      regenTimer = setTimeout(() => {
+        readUIIntoConfig();
+        restartPreview();
+      }, 120);
+    }
+
+    function applyPreset(name) {
+      const fresh = defaultConfig();
+      fresh.seed = cfg.seed;
+      fresh.meta.title = cfg.meta.title;
+      fresh.meta.author = cfg.meta.author;
+      cfg = PRESETS[name](fresh) || fresh;
+      writeConfigIntoUI();
+      restartPreview();
+    }
+
+    // Bind all inputs
+    const inputIds = [
+      "title","author","seed",
+      "resolutionScale","fov","zFar","lineWidth","glow",
+      "colorLine","colorGlow","bgTop","bgBottom",
+      "lengthZ","forwardSpeed","streetWidth","buildingDensity","buildingHeight","gateInterval","gateSize","fogStrength",
+      "maxHp","shield","speedX","speedY",
+      "shotRate","shotSpeed","missileCooldown","missileMaxActive",
+      "airDensity","groundDensity","enemyHp","enemySpeed","enemyShotInterval","enemyShotSpeed","enemyAccuracy","enemyDamage",
+    ];
+    for (const id of inputIds) {
+      el(id).addEventListener("input", scheduleRegen);
+      el(id).addEventListener("change", scheduleRegen);
+    }
+    presetSel.addEventListener("change", () => applyPreset(presetSel.value));
+
+    // Buttons
+    el("btnNew").addEventListener("click", () => {
+      cfg = defaultConfig();
+      presetSel.value = "Arcade (Default)";
+      writeConfigIntoUI();
+      restartPreview();
+    });
+
+    function downloadText(filename, text) {
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2500);
+    }
+
+    el("btnSave").addEventListener("click", () => {
+      readUIIntoConfig();
+      const json = JSON.stringify(cfg, null, 2);
+      downloadText("stgbuilder-config.json", json);
+    });
+
+    el("fileLoad").addEventListener("change", async (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      if (!f) return;
+      try {
+        const text = await f.text();
+        const loaded = JSON.parse(text);
+        const errs = validateConfig(loaded);
+        if (errs.length) {
+          showErrors(["Load failed:", ...errs]);
+          return;
+        }
+        cfg = loaded;
+        presetSel.value = "Arcade (Default)";
+        writeConfigIntoUI();
+        restartPreview();
+      } catch (e) {
+        showErrors(["Load failed:", String(e && e.message ? e.message : e)]);
+      } finally {
+        ev.target.value = "";
+      }
+    });
+
+    function escapeForInlineScript(jsonText) {
+      // Avoid accidental </script> termination and keep HTML safe.
+      return jsonText.replace(/</g, "\\u003c");
+    }
+
+    function buildExportHtml(cfg) {
+      const cfgJson = escapeForInlineScript(JSON.stringify(cfg, null, 2));
+      const engine = getExportGameEngineSource();
+      return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(cfg.meta.title || "City Run")}</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }
+    canvas { width: 100vw; height: 100vh; display: block; }
+    #hud {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      pointer-events: none;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      color: rgba(215, 241, 255, 0.86);
+      text-shadow: 0 0 12px rgba(0, 240, 255, 0.12);
+      white-space: pre;
+      z-index: 10;
+    }
+    #hint {
+      position: fixed;
+      right: 14px;
+      top: 14px;
+      pointer-events: none;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px;
+      color: rgba(215, 241, 255, 0.65);
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(120, 210, 255, 0.18);
+      padding: 6px 8px;
+      border-radius: 10px;
+      z-index: 10;
+    }
+    #sig {
+      position: fixed;
+      left: 14px;
+      bottom: 14px;
+      pointer-events: none;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(0, 255, 240, 0.72);
+      text-shadow: 0 0 18px rgba(0, 255, 240, 0.18);
+      border: 1px solid rgba(0, 255, 240, 0.18);
+      background: rgba(0, 0, 0, 0.22);
+      padding: 6px 10px;
+      border-radius: 999px;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <!-- Built with STGbuilder signature: #KGNINJA -->
+  <canvas id="view"></canvas>
+  <div id="hud"></div>
+  <div id="hint">Move WASD/Arrows | Shot Space | Missile F</div>
+  <div id="sig">#KGNINJA</div>
+  <script>
+  const GAME_CONFIG = ${cfgJson};
+  </script>
+  <script>
+  ${engine}
+  </script>
+</body>
+</html>`;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[c]));
+    }
+
+    el("btnExport").addEventListener("click", () => {
+      readUIIntoConfig();
+      const errs = validateConfig(cfg);
+      const ok = showErrors(errs);
+      if (!ok) return;
+      const html = buildExportHtml(cfg);
+      downloadText("index.html", html);
+    });
+
+    // Init with defaults
+    writeConfigIntoUI();
+    restartPreview();
+
+    // Apply preset if user changes it early.
+    applyPreset(presetSel.value);
+
+    // ----------------------------
+    // Exported game engine source (inline JS as a string)
+    // ----------------------------
+    function getExportGameEngineSource() {
+      // Kept as a single string so exported game is standalone.
+      // This engine intentionally mirrors the preview runtime logic.
+      return `(function(){\"use strict\";\n` +
+`function clamp(x,a,b){return Math.max(a,Math.min(b,x));}\n` +
+`function mulberry32(seed){let t=seed>>>0;return function(){t+=0x6D2B79F5;let x=Math.imul(t^(t>>>15),1|t);x^=x+Math.imul(x^(x>>>7),61|x);return((x^(x>>>14))>>>0)/4294967296;};}\n` +
+`function hashSeed(n){const x=Number.isFinite(n)?n:0;let h=Math.imul((x|0)^0x9e3779b9,0x85ebca6b);h^=h>>>13;h=Math.imul(h,0xc2b2ae35);h^=h>>>16;return h>>>0;}\n` +
+`function pushEdge(buf,ax,ay,az,bx,by,bz){buf.push(ax,ay,az,bx,by,bz);}\n` +
+`function createBoxEdges(cx,cy,cz,w,h,d,out){const hx=w*0.5,hy=h*0.5,hz=d*0.5;const x0=cx-hx,x1=cx+hx;const y0=cy-hy,y1=cy+hy;const z0=cz-hz,z1=cz+hz;pushEdge(out,x0,y0,z0,x1,y0,z0);pushEdge(out,x1,y0,z0,x1,y0,z1);pushEdge(out,x1,y0,z1,x0,y0,z1);pushEdge(out,x0,y0,z1,x0,y0,z0);pushEdge(out,x0,y1,z0,x1,y1,z0);pushEdge(out,x1,y1,z0,x1,y1,z1);pushEdge(out,x1,y1,z1,x0,y1,z1);pushEdge(out,x0,y1,z1,x0,y1,z0);pushEdge(out,x0,y0,z0,x0,y1,z0);pushEdge(out,x1,y0,z0,x1,y1,z0);pushEdge(out,x1,y0,z1,x1,y1,z1);pushEdge(out,x0,y0,z1,x0,y1,z1);}\n` +
+`function createGateEdges(cy,cz,w,h,th,out){const oW=w,oH=h;const iW=Math.max(2,w-th*2),iH=Math.max(2,h-th*2);const y0=cy-oH*0.5,y1=cy+oH*0.5,x0=-oW*0.5,x1=oW*0.5;const iy0=cy-iH*0.5,iy1=cy+iH*0.5,ix0=-iW*0.5,ix1=iW*0.5;pushEdge(out,x0,y0,cz,x1,y0,cz);pushEdge(out,x1,y0,cz,x1,y1,cz);pushEdge(out,x1,y1,cz,x0,y1,cz);pushEdge(out,x0,y1,cz,x0,y0,cz);pushEdge(out,ix0,iy0,cz,ix1,iy0,cz);pushEdge(out,ix1,iy0,cz,ix1,iy1,cz);pushEdge(out,ix1,iy1,cz,ix0,iy1,cz);pushEdge(out,ix0,iy1,cz,ix0,iy0,cz);}\n` +
+`function createGroundGrid(width,zStart,zEnd,step,out){const half=width*0.5;for(let x=-half;x<=half+1e-6;x+=step){pushEdge(out,x,0,zStart,x,0,zEnd);}for(let z=zStart;z>=zEnd-1e-6;z-=step){pushEdge(out,-half,0,z,half,0,z);}}\n` +
+`function toFloat32(buf){return new Float32Array(buf);}\n` +
+`function generateStageGeometry(cfg,rand){const city=cfg.stage.city;const len=cfg.stage.lengthZ;const step=110;const startZ=-140;const endZ=-len-200;const street=city.streetWidth;const density=city.buildingDensity;const baseH=city.buildingHeight;const buildings=[];const gates=[];const grid=[];createGroundGrid(street*2.2,startZ,endZ,10,grid);const margin=8;for(let z=startZ;z>=endZ;z-=step){for(const side of [-1,1]){if(rand()>density)continue;const w=10+rand()*24;const d=10+rand()*30;const h=18+rand()*baseH;const x=side*(street*0.5+margin+w*0.5+rand()*6);const y=h*0.5;const zJ=z+(rand()*2-1)*22;createBoxEdges(x,y,zJ,w,h,d,buildings);if(rand()<0.18){createBoxEdges(x,y+h*0.6,zJ,w*0.45,h*0.55,d*0.45,buildings);}}}\n` +
+`const gateInt=city.gateInterval,gateSize=city.gateSize;for(let z=-220;z>=endZ;z-=gateInt){createGateEdges(28+rand()*8,z,gateSize,gateSize*0.85,5,gates);}\n` +
+`const air=[];pushEdge(air,0,3,0,0,3,-18);pushEdge(air,0,3,-18,-8,1,-8);pushEdge(air,0,3,-18,8,1,-8);pushEdge(air,-8,1,-8,0,2,-6);pushEdge(air,8,1,-8,0,2,-6);pushEdge(air,-6,2,-6,6,2,-6);pushEdge(air,-6,2,-6,-10,2,4);pushEdge(air,6,2,-6,10,2,4);pushEdge(air,-10,2,4,0,3,10);pushEdge(air,10,2,4,0,3,10);\n` +
+`const ground=[];createBoxEdges(0,4,0,16,8,18,ground);createBoxEdges(-7,1.5,0,4,6,4,ground);createBoxEdges(7,1.5,0,4,6,4,ground);createBoxEdges(0,8,-6,8,6,8,ground);\n` +
+`const bullet=[];createBoxEdges(0,0,0,2,2,12,bullet);const enemyBullet=[];createBoxEdges(0,0,0,2.2,2.2,10,enemyBullet);const missile=[];createBoxEdges(0,0,0,3,3,16,missile);createBoxEdges(0,0,-8,10,1.5,3,missile);\n` +
+`const ring=[];const r=18;for(let i=0;i<12;i++){const a0=(i/12)*Math.PI*2,a1=((i+1)/12)*Math.PI*2;pushEdge(ring,Math.cos(a0)*r,Math.sin(a0)*r,0,Math.cos(a1)*r,Math.sin(a1)*r,0);}const burst=[];for(let i=0;i<9;i++){const a=(i/9)*Math.PI*2;pushEdge(burst,0,0,0,Math.cos(a)*24,Math.sin(a)*24,0);}\n` +
+`return {buildings:toFloat32(buildings),gates:toFloat32(gates),grid:toFloat32(grid),enemyShapes:{air:toFloat32(air),ground:toFloat32(ground)},shapes:{bullet:toFloat32(bullet),enemyBullet:toFloat32(enemyBullet),missile:toFloat32(missile),ring:toFloat32(ring),burst:toFloat32(burst)}};}\n` +
+`function generateEnemySpawns(cfg,rand){const street=cfg.stage.city.streetWidth;const len=cfg.stage.lengthZ;const start=-360;const sp=[];const airN=Math.floor((len/220)*cfg.enemies.airDensity*1.15);const gN=Math.floor((len/320)*cfg.enemies.groundDensity*1.05);\n` +
+`for(let i=0;i<airN;i++){let z=-(start+rand()*(len-520));const x=(rand()*2-1)*(street*0.45);const y=22+rand()*78;sp.push({kind:\"air\",x,y,z,phase:rand()*10,freq:0.6+rand()*0.8,ampX:8+rand()*22,ampY:4+rand()*12});}\n` +
+`for(let i=0;i<gN;i++){let z=-(start+rand()*(len-520));const side=rand()<0.5?-1:1;const x=side*(street*0.35+10+rand()*16);const y=5+rand()*10;sp.push({kind:\"ground\",x,y,z,phase:rand()*10,freq:0.4+rand()*0.7,ampX:5+rand()*10,ampY:2+rand()*6});}\n` +
+`for(const s of sp){s.z=clamp(s.z,-(len+200),-240);}return sp;}\n` +
+`const canvas=document.getElementById(\"view\");const hud=document.getElementById(\"hud\");const ctx=canvas.getContext(\"2d\",{alpha:false});const keys=new Set();\n` +
+`function onKey(ev,down){if(down){keys.add(ev.code);if(ev.code===\"Space\"||ev.code===\"KeyF\")ev.preventDefault();}else{keys.delete(ev.code);}}\n` +
+`window.addEventListener(\"keydown\",(ev)=>onKey(ev,true));window.addEventListener(\"keyup\",(ev)=>onKey(ev,false));\n` +
+`const cfg=window.GAME_CONFIG;const rand=mulberry32(hashSeed(cfg.seed));const gen=generateStageGeometry(cfg,rand);const spawns=generateEnemySpawns(cfg,rand).sort((a,b)=>b.z-a.z);let spawnIdx=0;\n` +
+`const state={time:0,player:{x:0,y:14,z:0,hp:cfg.player.maxHp,shield:cfg.player.shield,shotCd:0,missileCd:0},cam:{x:0,y:0,z:60},shots:[],missiles:[],enemies:[],enemyShots:[],explosions:[],score:0,cleared:false,gameOver:false,nearest:{id:\"NA\",dist:0}};\n` +
+`function resize(){const dpr=Math.max(1,Math.min(2.5,window.devicePixelRatio||1));const s=cfg.display.resolutionScale||1;const w=Math.max(320,Math.floor(canvas.clientWidth*dpr*s));const h=Math.max(240,Math.floor(canvas.clientHeight*dpr*s));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}return{w,h};}\n` +
+`function project(px,py,pz,w,h){const dx=px-state.cam.x,dy=py-state.cam.y,dz=pz-state.cam.z;const z=-dz;if(z<cfg.display.zNear||z>cfg.display.zFar)return null;const sc=cfg.display.fov/z;return{x:w*0.5+dx*sc*w*0.5,y:h*0.5-dy*sc*w*0.5,z};}\n` +
+`function drawEdges(edges,color,glowColor,width,glowStrength,w,h,tx,ty,tz,yaw,alphaMul){if(!edges||edges.length<6)return;tx=tx||0;ty=ty||0;tz=tz||0;yaw=yaw||0;alphaMul=alphaMul==null?1:alphaMul;const cos=yaw?Math.cos(yaw):1;const sin=yaw?Math.sin(yaw):0;const baseA=clamp(alphaMul,0,1);const glowA=0.22+glowStrength*0.38;const coreA=0.42+glowStrength*0.58;\n` +
+`function stroke(passW,shadowB,alpha){ctx.save();ctx.lineWidth=passW;ctx.lineCap=\"round\";ctx.lineJoin=\"round\";ctx.shadowBlur=shadowB;ctx.shadowColor=glowColor;ctx.strokeStyle=color;ctx.globalAlpha=alpha*baseA;ctx.beginPath();for(let i=0;i<edges.length;i+=6){let ax=edges[i]+tx,ay=edges[i+1]+ty,az=edges[i+2]+tz;let bx=edges[i+3]+tx,by=edges[i+4]+ty,bz=edges[i+5]+tz;if(yaw){const aox=ax-tx,aoz=az-tz,box=bx-tx,boz=bz-tz;ax=tx+aox*cos-aoz*sin;az=tz+aox*sin+aoz*cos;bx=tx+box*cos-boz*sin;bz=tz+box*sin+boz*cos;}const p0=project(ax,ay,az,w,h);const p1=project(bx,by,bz,w,h);if(!p0||!p1)continue;ctx.moveTo(p0.x,p0.y);ctx.lineTo(p1.x,p1.y);}ctx.stroke();ctx.restore();}\n` +
+`stroke(width*(1+glowStrength*1.4),18+glowStrength*24,glowA);stroke(width,8+glowStrength*12,coreA);}\n` +
+`function boom(x,y,z,str){state.explosions.push({x,y,z,t:0,str});}\n` +
+`function spawnShot(){state.shots.push({x:state.player.x,y:state.player.y,z:state.player.z-10,vz:-cfg.weapons.shotSpeed,r:6,life:2});}\n` +
+`function spawnMissile(){if(cfg.weapons.missileMaxActive<=0)return;if(state.missiles.length>=cfg.weapons.missileMaxActive)return;state.missiles.push({x:state.player.x,y:state.player.y-2,z:state.player.z-8,vz:-Math.max(520,cfg.weapons.shotSpeed*0.85),r:10,life:4,turn:1});}\n` +
+`function spawnEnemyShot(e){const dz=e.z-state.player.z;if(dz>-40)return;const aim=cfg.enemies.shotAccuracy;const jitter=(1-aim)*60;const tx=state.player.x+(rand()*2-1)*jitter;const ty=state.player.y+(rand()*2-1)*jitter*0.35;const dx=tx-e.x,dy=ty-e.y;const len=Math.hypot(dx,dy,1);const vx=(dx/len)*cfg.enemies.shotSpeed;const vy=(dy/len)*cfg.enemies.shotSpeed;state.enemyShots.push({x:e.x,y:e.y,z:e.z+10,vx,vy,vz:cfg.enemies.shotSpeed*0.9,r:8,life:3.2,dmg:cfg.enemies.enemyDamage});}\n` +
+`function applyDmg(dmg){if(state.player.shield>0){const s=Math.min(state.player.shield,dmg);state.player.shield-=s;dmg-=s;}if(dmg>0)state.player.hp-=dmg;if(state.player.hp<=0){state.player.hp=0;state.gameOver=true;}}\n` +
+`function updateNearest(){let best=null,bestD=1e9;for(const e of state.enemies){if(!e.alive)continue;const dz=Math.abs(state.player.z-e.z);if(dz<bestD){bestD=dz;best=e;}}state.nearest.id=best?best.kind:\"NA\";state.nearest.dist=best?Math.floor(bestD):0;}\n` +
+`let lastT=performance.now();function frame(){const now=performance.now();const dt=clamp((now-lastT)/1000,0.001,0.033);lastT=now;state.time+=dt;\n` +
+`const mx=(keys.has(\"ArrowRight\")||keys.has(\"KeyD\")?1:0)-(keys.has(\"ArrowLeft\")||keys.has(\"KeyA\")?1:0);const my=(keys.has(\"ArrowUp\")||keys.has(\"KeyW\")?1:0)-(keys.has(\"ArrowDown\")||keys.has(\"KeyS\")?1:0);\n` +
+`state.player.x+=mx*cfg.player.speedX*dt;state.player.y+=my*cfg.player.speedY*dt;state.player.x=clamp(state.player.x,-cfg.stage.city.streetWidth*0.5+6,cfg.stage.city.streetWidth*0.5-6);state.player.y=clamp(state.player.y,4,110);\n` +
+`if(!state.gameOver&&!state.cleared)state.player.z-=cfg.stage.forwardSpeed*dt;const camLag=46;state.cam.x+= (state.player.x-state.cam.x)*Math.min(1,dt*7);state.cam.y+=((state.player.y+12)-state.cam.y)*Math.min(1,dt*4.8);state.cam.z=state.player.z+camLag;\n` +
+`state.player.shotCd=Math.max(0,state.player.shotCd-dt);state.player.missileCd=Math.max(0,state.player.missileCd-dt);\n` +
+`if(!state.gameOver&&!state.cleared){if(keys.has(\"Space\")&&state.player.shotCd<=0){spawnShot();state.player.shotCd=1/cfg.weapons.shotRate;}if(keys.has(\"KeyF\")&&state.player.missileCd<=0){spawnMissile();state.player.missileCd=cfg.weapons.missileCooldown;}}\n` +
+`const spawnWindow=900;while(spawnIdx<spawns.length&&state.player.z<spawns[spawnIdx].z+spawnWindow){const s=spawns[spawnIdx++];state.enemies.push({kind:s.kind,x:s.x,y:s.y,z:s.z,baseX:s.x,baseY:s.y,baseZ:s.z,hp:cfg.enemies.enemyHp,r:s.kind===\"ground\"?14:12,alive:true,t:0,phase:s.phase,freq:s.freq,ampX:s.ampX,ampY:s.ampY,shotT:0.2+rand()*0.4});}\n` +
+`for(const e of state.enemies){if(!e.alive)continue;const wave=Math.sin((state.time+e.phase)*e.freq);const sway=Math.cos((state.time+e.phase)*e.freq*0.7);e.x=e.baseX+wave*e.ampX;e.y=e.baseY+sway*e.ampY;e.z+=cfg.enemies.enemySpeed*0.15*dt;e.shotT-=dt;const dz=e.z-state.player.z;if(e.shotT<=0&&dz<-120&&dz>-1800&&!state.gameOver&&!state.cleared){spawnEnemyShot(e);e.shotT=cfg.enemies.shotInterval*(0.85+rand()*0.35);}}\n` +
+`for(let i=state.shots.length-1;i>=0;i--){const s=state.shots[i];s.life-=dt;s.z+=s.vz*dt;if(s.life<=0)state.shots.splice(i,1);}for(let i=state.missiles.length-1;i>=0;i--){const m=state.missiles[i];m.life-=dt;let target=null,best=1e9;for(const e of state.enemies){if(!e.alive)continue;const d=Math.abs(m.z-e.z);if(d<best){best=d;target=e;}}if(target&&best<2400){const dx=target.x-m.x,dy=target.y-m.y;m.x+=clamp(dx,-1,1)*m.turn*100*dt;m.y+=clamp(dy,-1,1)*m.turn*80*dt;}m.z+=m.vz*dt;if(m.life<=0)state.missiles.splice(i,1);}for(let i=state.enemyShots.length-1;i>=0;i--){const s=state.enemyShots[i];s.life-=dt;s.x+=s.vx*dt;s.y+=s.vy*dt;s.z+=s.vz*dt;if(s.life<=0)state.enemyShots.splice(i,1);}\n` +
+`for(const s of state.shots){for(const e of state.enemies){if(!e.alive)continue;const dx=s.x-e.x,dy=s.y-e.y,dz=s.z-e.z;const d=Math.hypot(dx,dy,dz);if(d<s.r+e.r){e.hp-=26;s.life=0;boom(s.x,s.y,s.z,0.7);if(e.hp<=0){e.alive=false;state.score+=100;boom(e.x,e.y,e.z,1.2);}break;}}}\n` +
+`for(const m of state.missiles){for(const e of state.enemies){if(!e.alive)continue;const dx=m.x-e.x,dy=m.y-e.y,dz=m.z-e.z;const d=Math.hypot(dx,dy,dz);if(d<m.r+e.r){e.hp-=85;m.life=0;boom(m.x,m.y,m.z,1.6);if(e.hp<=0){e.alive=false;state.score+=180;boom(e.x,e.y,e.z,1.6);}break;}}}\n` +
+`if(!state.gameOver&&!state.cleared){for(const s of state.enemyShots){const dx=s.x-state.player.x,dy=s.y-state.player.y,dz=s.z-state.player.z;const d=Math.hypot(dx,dy,dz);if(d<10+s.r){s.life=0;boom(s.x,s.y,s.z,0.9);applyDmg(s.dmg);}}}\n` +
+`for(let i=state.explosions.length-1;i>=0;i--){const ex=state.explosions[i];ex.t+=dt;if(ex.t>0.8)state.explosions.splice(i,1);}if(!state.cleared&&state.player.z<-cfg.stage.lengthZ)state.cleared=true;updateNearest();\n` +
+`const {w,h}=resize();const bg=ctx.createLinearGradient(0,0,0,h);bg.addColorStop(0,cfg.colors.bgTop);bg.addColorStop(1,cfg.colors.bgBottom);ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);\n` +
+`const fog=cfg.stage.city.fogStrength;const line=cfg.colors.line;const glow=cfg.colors.glow;const lw=cfg.display.lineWidth;const gs=cfg.display.glowStrength;\n` +
+`drawEdges(gen.grid,line,glow,lw*0.85,gs*0.7,w,h,0,0,0,0,0.75);drawEdges(gen.buildings,line,glow,lw,gs,w,h,0,0,0,0,1);drawEdges(gen.gates,line,glow,lw*1.2,gs,w,h,0,0,0,0,1);\n` +
+`for(const e of state.enemies){if(!e.alive)continue;const a=clamp(1-(Math.abs(e.z-state.player.z)/cfg.display.zFar)*fog,0.18,1);const yaw=e.kind===\"air\"?Math.sin(state.time*0.8+e.phase)*0.12:0;const edges=(e.kind===\"ground\")?gen.enemyShapes.ground:gen.enemyShapes.air;drawEdges(edges,line,glow,lw*1.1,gs,w,h,e.x,e.y,e.z,yaw,a);}\n` +
+`for(const s of state.shots){const a=clamp(1-(Math.abs(s.z-state.player.z)/cfg.display.zFar)*fog,0.3,1);drawEdges(gen.shapes.bullet,line,glow,lw*0.9,gs*0.7,w,h,s.x,s.y,s.z,0,a);}for(const m of state.missiles){const a=clamp(1-(Math.abs(m.z-state.player.z)/cfg.display.zFar)*fog,0.3,1);drawEdges(gen.shapes.missile,glow,glow,lw*1.2,gs*1.0,w,h,m.x,m.y,m.z,0,a);}for(const s of state.enemyShots){const a=clamp(1-(Math.abs(s.z-state.player.z)/cfg.display.zFar)*fog,0.3,1);drawEdges(gen.shapes.enemyBullet,\"#ff6a84\",\"#ff9ab0\",lw*1.0,gs*0.85,w,h,s.x,s.y,s.z,0,a);}\n` +
+`for(const ex of state.explosions){const t=ex.t/0.8;const a=clamp(1-t,0,1);drawEdges(gen.shapes.burst,glow,glow,lw*(1+t),gs,w,h,ex.x,ex.y,ex.z,state.time*1.7,a);drawEdges(gen.shapes.ring,line,glow,lw*0.9,gs,w,h,ex.x,ex.y,ex.z,0,a*0.85);}\n` +
+`const stagePct=clamp((-state.player.z)/cfg.stage.lengthZ,0,1);hud.textContent=(cfg.meta.title||\"CITY RUN\").toUpperCase()+\"\\n\"+\"HP \"+String(Math.floor(state.player.hp)).padStart(3,\" \")+\"  SH \"+String(Math.floor(state.player.shield)).padStart(3,\" \")+\"\\n\"+\"E \"+state.nearest.id+\"/\"+state.nearest.dist+\"  SCORE \"+state.score+\"\\n\"+\"STAGE \"+(stagePct*100).toFixed(1)+\"%  \"+(state.cleared?\"CLEAR\":(state.gameOver?\"GAME OVER\":\"RUN\"));\n` +
+`requestAnimationFrame(frame);}requestAnimationFrame(frame);\n` +
+`})();`;
+    }
+  })();
+  </script>
+</body>
+</html>
